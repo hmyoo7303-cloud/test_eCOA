@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>eCOA Demo · 환자등록 · 알림 · NRS/Likert</title>
+<meta name="description" content="프런트엔드 전용 eCOA 데모 — 환자등록/이메일 알림/응답여부 테이블 + NRS 통증 10점 / Likert 피로도 5단계. 백엔드·DB 없음." />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root{
+    --paper:#f3f1ea; --paper-2:#ece9df; --surface:#fbfaf6;
+    --ink:#1b2522; --ink-soft:#5d6863; --ink-faint:#9aa39e;
+    --line:#e3e0d6; --line-strong:#d4d0c3;
+    --accent:#0f7a6b; --accent-deep:#0a5d51; --accent-soft:#dff0ec;
+    --warn:#b4541f; --warn-soft:#f6e6da;
+    --ok:#2f7d4f; --ok-soft:#e3f0e7;
+    --pend:#9a6b16; --pend-soft:#f6ecd6;
+    --shadow:0 1px 2px rgba(27,37,34,.05),0 12px 32px -12px rgba(27,37,34,.18);
+    --radius:18px;
+    --font:"Pretendard Variable","Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font); color:var(--ink);
+    background:radial-gradient(120% 80% at 80% -10%,rgba(15,122,107,.07),transparent 55%),
+               radial-gradient(90% 70% at -10% 110%,rgba(180,84,31,.05),transparent 50%),var(--paper);
+    min-height:100vh; -webkit-font-smoothing:antialiased; line-height:1.5; padding:24px 16px 72px;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+  .wrap.narrow{max-width:660px}
+
+  /* masthead */
+  .mast{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:0 4px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .glyph{width:38px;height:38px;border-radius:11px;flex:0 0 auto;background:linear-gradient(150deg,var(--accent),var(--accent-deep));display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px -6px rgba(10,93,81,.6)}
+  .glyph svg{width:21px;height:21px}
+  .brand b{font-size:15px;font-weight:700;letter-spacing:-.01em;display:block;line-height:1.2}
+  .brand small{font-size:11.5px;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase}
+  .demo-tag{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--warn);background:var(--warn-soft);border:1px solid #e9c9b0;padding:5px 10px;border-radius:999px;white-space:nowrap}
+
+  /* segmented tabs */
+  .tabs{display:inline-flex;background:var(--paper-2);border:1px solid var(--line-strong);border-radius:12px;padding:4px;gap:4px;margin-bottom:18px}
+  .tabs button{appearance:none;font-family:inherit;cursor:pointer;border:0;background:transparent;color:var(--ink-soft);font-size:13.5px;font-weight:650;padding:9px 16px;border-radius:9px;transition:all .15s}
+  .tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(27,37,34,.12)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .card + .card{margin-top:18px}
+  .card-head{padding:20px 24px;border-bottom:1px solid var(--line)}
+  .card-head h2{margin:0;font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+  .card-head p{margin:5px 0 0;font-size:12.5px;color:var(--ink-soft)}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+  .stats .cell{background:var(--surface);padding:18px 22px}
+  .stats .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+  .stats .v{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stats .v small{font-size:14px;font-weight:600;color:var(--ink-soft)}
+
+  /* registration form */
+  .reg{padding:22px 24px;display:grid;grid-template-columns:1fr 1.4fr auto;gap:12px;align-items:end}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .field label{font-size:12px;font-weight:650;color:var(--ink-soft)}
+  .field input{font-family:inherit;font-size:14px;color:var(--ink);background:#fff;border:1.5px solid var(--line-strong);border-radius:10px;padding:11px 12px;transition:border-color .15s,box-shadow .15s}
+  .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(15,122,107,.18)}
+  .field input.bad{border-color:var(--warn);box-shadow:0 0 0 3px rgba(180,84,31,.15)}
+  .btn{appearance:none;font-family:inherit;cursor:pointer;border:0;background:linear-gradient(150deg,var(--accent),var(--accent-deep));color:#fff;font-size:14px;font-weight:700;padding:12px 18px;border-radius:10px;box-shadow:0 10px 22px -12px rgba(10,93,81,.7);transition:transform .12s,box-shadow .15s;white-space:nowrap}
+  .btn:hover{transform:translateY(-2px)}
+  .btn.sm{padding:8px 13px;font-size:12.5px;box-shadow:none}
+  .btn.ghost{background:var(--paper-2);color:var(--ink);border:1px solid var(--line-strong);box-shadow:none}
+  .btn.ghost:hover{background:#fff}
+
+  /* table */
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:650;text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--paper-2)}
+  tbody td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:rgba(15,122,107,.03)}
+  .sid{font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .email{color:var(--ink-soft);font-size:12.5px}
+  .muted{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .badge .d{width:6px;height:6px;border-radius:50%}
+  .badge.pend{color:var(--pend);background:var(--pend-soft)} .badge.pend .d{background:var(--pend)}
+  .badge.done{color:var(--ok);background:var(--ok-soft)} .badge.done .d{background:var(--ok)}
+  .rowacts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .ico{appearance:none;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:650;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+  .ico:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .ico svg{width:13px;height:13px}
+  .resval{font-size:12.5px;font-variant-numeric:tabular-nums}
+  .resval b{font-weight:700}
+  .empty{padding:40px 24px;text-align:center;color:var(--ink-faint);font-size:13px}
+
+  /* note */
+  .sysnote{margin:14px 4px 0;font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.6}
+
+  /* ===== patient form ===== */
+  .card-head h1{margin:0;font-size:21px;letter-spacing:-.02em;font-weight:750}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line-strong);border-radius:8px;padding:5px 10px}
+  .chip b{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
+  .chip .dot.live{background:var(--ok);box-shadow:0 0 0 3px rgba(47,125,79,.18)}
+  .prog{height:4px;background:var(--paper-2)}
+  .prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-deep));transition:width .45s cubic-bezier(.2,.8,.2,1)}
+  .item{padding:26px 24px;border-bottom:1px solid var(--line)}
+  .item:last-of-type{border-bottom:0}
+  .q-no{font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+  .q-no .req{color:var(--warn);margin-left:2px}
+  .q-text{margin:7px 0 4px;font-size:16.5px;font-weight:650;letter-spacing:-.01em}
+  .q-hint{margin:0 0 18px;font-size:12.5px;color:var(--ink-faint)}
+  .nrs-anchors{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);margin-bottom:9px;font-weight:550}
+  .nrs{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}
+  .nrs button{appearance:none;font-family:inherit;cursor:pointer;border:1.5px solid var(--line-strong);border-radius:11px;padding:13px 0;font-size:15.5px;font-weight:650;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--nrs-bg,#fff);transition:transform .12s ease,border-color .15s,box-shadow .15s,background .15s;position:relative}
+  .nrs button:hover{transform:translateY(-2px)}
+  .nrs button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(15,122,107,.28)}
+  .nrs button[aria-pressed="true"]{border-color:var(--nrs-accent,var(--accent));background:var(--nrs-accent,var(--accent));color:#fff;box-shadow:0 8px 18px -8px var(--nrs-accent,var(--accent));transform:translateY(-2px)}
+  .nrs-readout{margin-top:13px;font-size:12.5px;color:var(--ink-soft);min-height:18px}
+  .nrs-readout b{color:var(--ink);font-weight:650}
+  .likert{display:flex;flex-direction:column;gap:9px}
+  .lk{display:flex;align-items:center;gap:13px;cursor:pointer;border:1.5px solid var(--line-strong);border-radius:13px;padding:14px 15px;background:#fff;transition:border-color .15s,background .15s,transform .12s;position:relative}
+  .lk:hover{transform:translateX(2px);border-color:#bfc7c2}
+  .lk .radio{width:21px;height:21px;border-radius:50%;border:2px solid var(--line-strong);flex:0 0 auto;display:grid;place-items:center;transition:border-color .15s}
+  .lk .radio i{width:10px;height:10px;border-radius:50%;background:var(--accent);transform:scale(0);transition:transform .18s cubic-bezier(.3,1.4,.5,1)}
+  .lk .body b{display:block;font-size:14.5px;font-weight:650;letter-spacing:-.01em}
+  .lk .body span{font-size:12px;color:var(--ink-faint)}
+  .lk .grade{margin-left:auto;font-size:11.5px;color:var(--ink-faint);font-weight:600;font-variant-numeric:tabular-nums}
+  .lk input{position:absolute;opacity:0;pointer-events:none}
+  .lk:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+  .lk:has(input:checked) .radio{border-color:var(--accent)}
+  .lk:has(input:checked) .radio i{transform:scale(1)}
+  .item.invalid{background:linear-gradient(0deg,rgba(180,84,31,.045),transparent)}
+  .err{display:none;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;color:var(--warn);font-weight:600}
+  .err svg{width:15px;height:15px;flex:0 0 auto}
+  .item.invalid .err{display:flex}
+  .foot{padding:22px 24px 24px}
+  .submit{width:100%;appearance:none;font-family:inherit;cursor:pointer;border:0;background:linear-gradient(150deg,var(--accent),var(--accent-deep));color:#fff;font-size:15.5px;font-weight:700;letter-spacing:-.01em;padding:16px;border-radius:13px;box-shadow:0 12px 26px -12px rgba(10,93,81,.7);transition:transform .12s,box-shadow .15s}
+  .submit:hover{transform:translateY(-2px)}
+  .backlink{display:inline-flex;align-items:center;gap:6px;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:0;cursor:pointer;font-family:inherit;padding:4px}
+  .backlink:hover{color:var(--accent)}
+  .backlink svg{width:15px;height:15px}
+
+  /* ===== login ===== */
+  .login-card{max-width:420px;margin:5vh auto 0}
+  .login-head{padding:32px 30px 6px;text-align:center}
+  .login-head .lglyph{width:50px;height:50px;border-radius:14px;margin:0 auto 16px;background:linear-gradient(150deg,var(--accent),var(--accent-deep));display:grid;place-items:center;color:#fff;box-shadow:0 10px 24px -8px rgba(10,93,81,.6)}
+  .login-head .lglyph svg{width:25px;height:25px}
+  .login-head h1{margin:0;font-size:21px;font-weight:750;letter-spacing:-.02em}
+  .login-head p{margin:6px 0 0;font-size:13px;color:var(--ink-soft)}
+  .login-body{padding:18px 30px 28px;display:flex;flex-direction:column;gap:14px}
+  .pw-wrap{position:relative}
+  .pw-wrap input{width:100%;padding-right:54px}
+  .pw-wrap .toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);appearance:none;border:0;background:transparent;color:var(--ink-faint);font-family:inherit;font-size:12px;font-weight:650;cursor:pointer;padding:6px 8px;border-radius:7px}
+  .pw-wrap .toggle:hover{color:var(--accent);background:var(--accent-soft)}
+  .login-err{display:none;align-items:center;gap:6px;font-size:12.5px;color:var(--warn);font-weight:600;margin-top:-2px}
+  .login-err svg{width:15px;height:15px;flex:0 0 auto}
+  .login-err.show{display:flex}
+  .login-hint{margin-top:4px;font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.6;background:var(--paper-2);border:1px dashed var(--line-strong);border-radius:10px;padding:11px 12px}
+  .login-hint b{color:var(--ink-soft);font-weight:650}
+
+  /* console topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .topbar .tabs{margin-bottom:0}
+
+  /* confirm screen */
+  .done-card{padding:34px 28px;text-align:center}
+  .done-card .ok{width:54px;height:54px;border-radius:15px;margin:0 auto 16px;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center}
+  .done-card .ok svg{width:28px;height:28px}
+  .done-card h2{margin:0 0 6px;font-size:20px;font-weight:750}
+  .done-card p{margin:0;color:var(--ink-soft);font-size:13.5px}
+  .done-sum{display:inline-flex;gap:10px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+  .done-sum .pill{background:var(--paper-2);border:1px solid var(--line-strong);border-radius:10px;padding:10px 14px;font-size:13px}
+  .done-sum .pill b{font-weight:750;font-variant-numeric:tabular-nums}
+
+  /* toast */
+  #toasts{position:fixed;left:0;right:0;bottom:24px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:60;pointer-events:none}
+  .toast{background:var(--ink);color:#f3f1ea;font-size:13px;font-weight:600;padding:11px 16px;border-radius:11px;box-shadow:0 12px 30px -8px rgba(0,0,0,.4);display:flex;align-items:center;gap:9px;animation:tin .3s cubic-bezier(.2,.8,.2,1)}
+  .toast svg{width:16px;height:16px;color:#7fd6c4}
+  @keyframes tin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* modal */
+  .scrim{position:fixed;inset:0;background:rgba(27,37,34,.45);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;padding:18px;z-index:70}
+  .scrim.show{display:flex;animation:fin .2s ease}
+  @keyframes fin{from{opacity:0}to{opacity:1}}
+  .modal{background:var(--surface);border-radius:16px;max-width:520px;width:100%;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);overflow:hidden;animation:rise .35s cubic-bezier(.2,.8,.2,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .modal-head{display:flex;align-items:center;gap:11px;padding:18px 20px;border-bottom:1px solid var(--line)}
+  .modal-head .mi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:0 0 auto}
+  .modal-head .mi svg{width:18px;height:18px}
+  .modal-head b{font-size:15px;font-weight:700;flex:1}
+  .modal-head .x{appearance:none;border:0;background:var(--paper-2);cursor:pointer;width:30px;height:30px;border-radius:8px;color:var(--ink-soft);font-size:18px;line-height:1}
+  .modal-body{padding:20px}
+  .mail-row{display:flex;gap:8px;font-size:13px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .mail-row .lab{color:var(--ink-faint);width:54px;flex:0 0 auto;font-weight:600}
+  .mail-row .val{color:var(--ink);min-width:0;word-break:break-word}
+  .mail-body{margin-top:14px;font-size:13.5px;color:var(--ink-soft);line-height:1.7;background:var(--paper-2);border:1px solid var(--line);border-radius:11px;padding:14px}
+  .mail-body a{color:var(--accent);font-weight:600;word-break:break-all}
+  .modal-acts{display:flex;gap:8px;margin-top:16px}
+  .modal-acts .btn{flex:1;justify-content:center;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  pre{margin:0;background:#16201d;color:#dfe7e3;border-radius:12px;padding:16px 18px;overflow:auto;font:12.5px/1.65 var(--mono);white-space:pre;max-height:340px}
+  pre .key{color:#7fd6c4}.pre .str{color:#e2c88a}
+  pre .str{color:#e2c88a} pre .num{color:#9ec6ff}
+
+  @media (max-width:680px){
+    .reg{grid-template-columns:1fr}
+    .stats{grid-template-columns:repeat(3,1fr)}
+    .stats .v{font-size:22px}
+  }
+  @media (max-width:460px){
+    .nrs{gap:4px} .nrs button{padding:11px 0;font-size:14px;border-radius:9px}
+    .card-head,.item,.foot,.reg{padding-left:18px;padding-right:18px}
+    .stats .cell{padding:14px 14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+<div id="toasts"></div>
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ 설정/콘텐츠 ============ */
+  var STUDY = { id:"DEMO-001", visit:"Week 1", formId:"PRO-NRS-LIKERT", formVersion:"1.0.0" };
+  var FATIGUE = [
+    {value:0,label:"없음",desc:"피로감을 느끼지 않음"},
+    {value:1,label:"경미",desc:"약간 피곤하지만 일상에 지장 없음"},
+    {value:2,label:"중등도",desc:"활동 시 피로감을 분명히 느낌"},
+    {value:3,label:"심함",desc:"휴식이 필요할 만큼 피곤함"},
+    {value:4,label:"매우 심함",desc:"일상 활동이 어려울 정도"}
+  ];
+  var PAIN_BANDS=[{max:0,t:"통증 없음"},{max:3,t:"경증"},{max:6,t:"중등도"},{max:10,t:"중증"}];
+
+  /* ============ 인메모리 DB (새로고침 시 초기화) ============ */
+  var DB = { patients: [
+    p("S-001","minji.kim@example.com", resp(2,1)),
+    p("S-002","jihoon.lee@example.com", null),
+    p("S-003","sora.park@example.com", null)
+  ]};
+  function p(id,email,response){
+    return {id:id,email:email,visit:STUDY.visit,registeredAt:new Date(Date.now()-86400000),reminders:response?2:0,lastReminderAt:response?new Date(Date.now()-3600000):null,response:response};
+  }
+  function resp(pain,fat){ // 시드용 완료 응답
+    var f=FATIGUE[fat],b=PAIN_BANDS.find(function(x){return pain<=x.max;});
+    var t=new Date(Date.now()-1800000);
+    return {studyId:STUDY.id,subjectId:"S-001",visit:STUDY.visit,formId:STUDY.formId,formVersion:STUDY.formVersion,locale:"ko-KR",
+      startedAt:new Date(t-90000).toISOString(),completedAt:t.toISOString(),durationSec:90,
+      items:[{itemId:"PAIN_NRS",type:"NRS",concept:"통증 강도 (지난 24시간)",scaleMin:0,scaleMax:10,value:pain,valueLabel:b.t},
+             {itemId:"FATIGUE_LIKERT",type:"Likert",concept:"피로도 (지난 24시간)",scalePoints:5,value:f.value,valueLabel:f.label}]};
+  }
+
+  var root=document.getElementById("root");
+  var view="console"; // console | patient
+  var activeSubject=null;
+  var authed=false;
+
+  /* 딥링크: ?subject=S-002 → 환자 입력 화면 (이메일 링크 시뮬레이션) */
+  var params=new URLSearchParams(location.search);
+  var deep=params.get("subject");
+  var standalone=false;
+  if(deep){ activeSubject=deep; view="patient"; standalone=true; }
+
+  /* ============ 렌더 라우터 ============ */
+  function render(){
+    if(!authed && !standalone){ renderLogin(); return; }
+    if(view==="patient") renderPatient();
+    else renderConsole();
+  }
+
+  function mast(tag){
+    return ''+
+    '<header class="mast"><div class="brand">'+
+      '<span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6M9 16h6M9 8h3"/><rect x="5" y="3" width="14" height="18" rx="2.5"/></svg></span>'+
+      '<span class="brand"><b>eCOA Demo</b><small>'+STUDY.id+' · '+STUDY.visit+'</small></span>'+
+    '</div><span class="demo-tag">'+(tag||'RENDER-ONLY · NO BACKEND')+'</span></header>';
+  }
+
+  /* ============ 로그인 ============ */
+  function renderLogin(){
+    root.className="wrap narrow";
+    root.innerHTML =
+      mast('STAFF SIGN-IN') +
+      '<main class="card login-card">'+
+        '<div class="login-head">'+
+          '<div class="lglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>'+
+          '<h1>연구자 로그인</h1>'+
+          '<p>eCOA 관리자 콘솔에 접속하려면 로그인하세요.</p>'+
+        '</div>'+
+        '<div class="login-body">'+
+          '<div class="field"><label for="lid">아이디</label><input id="lid" autocomplete="username" placeholder="아이디 입력"></div>'+
+          '<div class="field"><label for="lpw">비밀번호</label><div class="pw-wrap">'+
+            '<input id="lpw" type="password" autocomplete="current-password" placeholder="비밀번호 입력">'+
+            '<button type="button" class="toggle" id="pwToggle" aria-label="비밀번호 표시">표시</button>'+
+          '</div></div>'+
+          '<div class="login-err" id="lerr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>아이디와 비밀번호를 모두 입력하세요.</div>'+
+          '<button class="btn" id="loginBtn" style="width:100%;justify-content:center;padding:14px">로그인</button>'+
+          '<div class="login-hint">데모 화면입니다. 인증 서버가 없어 <b>비어 있지 않은 값</b>이면 어떤 ID/PW로도 로그인됩니다.</div>'+
+        '</div>'+
+      '</main>';
+
+    var idEl=document.getElementById("lid"), pwEl=document.getElementById("lpw"), err=document.getElementById("lerr");
+    function attempt(){
+      var id=idEl.value.trim(), pw=pwEl.value.trim();
+      if(!id || !pw){ err.classList.add("show"); (id?pwEl:idEl).focus(); return; }
+      authed=true; view="console"; render(); toast("로그인 완료 · "+id);
+    }
+    document.getElementById("loginBtn").onclick=attempt;
+    [idEl,pwEl].forEach(function(el){
+      el.addEventListener("input",function(){ err.classList.remove("show"); });
+      el.addEventListener("keydown",function(e){ if(e.key==="Enter") attempt(); });
+    });
+    document.getElementById("pwToggle").onclick=function(){
+      var show=pwEl.type==="password"; pwEl.type=show?"text":"password"; this.textContent=show?"숨김":"표시";
+    };
+    idEl.focus();
+  }
+
+  /* ============ 관리자 콘솔 ============ */
+  function renderConsole(){
+    root.className="wrap";
+    var total=DB.patients.length;
+    var done=DB.patients.filter(function(x){return x.response;}).length;
+    var rate= total? Math.round(done/total*100):0;
+
+    var rows = total ? DB.patients.map(rowHtml).join("") :
+      '<tr><td colspan="6"><div class="empty">등록된 환자가 없습니다. 위에서 환자를 등록하세요.</div></td></tr>';
+
+    root.innerHTML =
+      mast() +
+      '<div class="topbar"><div class="tabs"><button class="on">관리자 콘솔</button><button id="toForm">환자 입력 화면</button></div>'+
+      '<button class="ico" id="logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>로그아웃</button></div>'+
+      '<div class="card"><div class="stats">'+
+        '<div class="cell"><div class="k">등록 환자</div><div class="v">'+total+'<small> 명</small></div></div>'+
+        '<div class="cell"><div class="k">응답 완료</div><div class="v">'+done+'<small> 명</small></div></div>'+
+        '<div class="cell"><div class="k">응답률</div><div class="v">'+rate+'<small> %</small></div></div>'+
+      '</div></div>'+
+
+      '<div class="card"><div class="card-head"><h2>환자 등록</h2><p>식별코드와 이메일을 입력하면 목록에 추가됩니다. (브라우저 메모리에만 저장)</p></div>'+
+        '<div class="reg">'+
+          '<div class="field"><label for="rid">환자 식별코드</label><input id="rid" placeholder="'+nextId()+'" autocomplete="off"></div>'+
+          '<div class="field"><label for="rem">이메일</label><input id="rem" type="email" placeholder="patient@example.com" autocomplete="off"></div>'+
+          '<button class="btn" id="addBtn">+ 등록</button>'+
+        '</div></div>'+
+
+      '<div class="card"><div class="card-head"><h2>응답 여부</h2><p>알림 발송(시뮬레이션) · 설문 링크 복사 · 응답 입력. 환자가 제출하면 상태가 즉시 갱신됩니다.</p></div>'+
+        '<div class="tbl-wrap"><table><thead><tr>'+
+          '<th>환자</th><th>알림</th><th>상태</th><th>응답값</th><th>최근 활동</th><th style="text-align:right">작업</th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+      '<p class="sysnote">프런트엔드 전용 데모 · 서버/DB 없음 · 이메일 발송은 시뮬레이션이며 mailto 초안만 생성합니다 · 새로고침하면 입력 데이터는 사라집니다.</p>';
+
+    document.getElementById("toForm").onclick=function(){ activeSubject=DB.patients[0]?DB.patients[0].id:null; view="patient"; standalone=false; render(); };
+    document.getElementById("logout").onclick=function(){ authed=false; view="console"; render(); toast("로그아웃되었습니다"); };
+    document.getElementById("addBtn").onclick=addPatient;
+    document.getElementById("rid").addEventListener("keydown",function(e){if(e.key==="Enter")addPatient();});
+    document.getElementById("rem").addEventListener("keydown",function(e){if(e.key==="Enter")addPatient();});
+
+    // row actions
+    DB.patients.forEach(function(pt){
+      var b;
+      if(b=document.getElementById("mail-"+pt.id)) b.onclick=function(){ openMail(pt); };
+      if(b=document.getElementById("copy-"+pt.id)) b.onclick=function(){ copy(linkFor(pt.id)); toast("설문 링크 복사됨"); };
+      if(b=document.getElementById("enter-"+pt.id)) b.onclick=function(){ activeSubject=pt.id; view="patient"; standalone=false; render(); };
+      if(b=document.getElementById("json-"+pt.id)) b.onclick=function(){ openJson(pt); };
+    });
+  }
+
+  function rowHtml(pt){
+    var done=!!pt.response;
+    var status= done
+      ? '<span class="badge done"><span class="d"></span>응답 완료</span>'
+      : '<span class="badge pend"><span class="d"></span>미응답</span>';
+    var resval= done
+      ? '<span class="resval">NRS <b>'+pt.response.items[0].value+'</b>/10 · 피로 <b>'+pt.response.items[1].valueLabel+'</b> <button class="ico" id="json-'+pt.id+'" style="padding:3px 7px;margin-left:4px">JSON</button></span>'
+      : '<span class="muted">—</span>';
+    var last= done ? '제출 '+fmt(new Date(pt.response.completedAt))
+            : (pt.lastReminderAt? '알림 '+fmt(pt.lastReminderAt) : '등록 '+fmt(pt.registeredAt));
+    var reminder= pt.reminders>0 ? '<span class="muted">'+pt.reminders+'회</span>' : '<span class="muted">—</span>';
+    var actions = done
+      ? '<button class="ico" id="enter-'+pt.id+'">다시 입력</button>'
+      : '<button class="ico" id="mail-'+pt.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>알림</button>'+
+        '<button class="ico" id="copy-'+pt.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>링크</button>'+
+        '<button class="ico" id="enter-'+pt.id+'">응답 입력</button>';
+    return '<tr>'+
+      '<td><div class="sid">'+pt.id+'</div><div class="email">'+pt.email+'</div></td>'+
+      '<td>'+reminder+'</td>'+
+      '<td>'+status+'</td>'+
+      '<td>'+resval+'</td>'+
+      '<td><span class="muted">'+last+'</span></td>'+
+      '<td><div class="rowacts">'+actions+'</div></td>'+
+    '</tr>';
+  }
+
+  function addPatient(){
+    var idEl=document.getElementById("rid"), emEl=document.getElementById("rem");
+    var id=(idEl.value.trim()||idEl.placeholder).toUpperCase();
+    var email=emEl.value.trim();
+    var ok=true;
+    if(DB.patients.some(function(x){return x.id===id;})){ idEl.classList.add("bad"); toast("이미 등록된 식별코드입니다"); ok=false; }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ emEl.classList.add("bad"); ok=false; }
+    if(!ok) return;
+    DB.patients.push({id:id,email:email,visit:STUDY.visit,registeredAt:new Date(),reminders:0,lastReminderAt:null,response:null});
+    toast(id+" 등록 완료");
+    renderConsole();
+  }
+
+  /* ============ 이메일 알림 (시뮬레이션) ============ */
+  function openMail(pt){
+    pt.reminders++; pt.lastReminderAt=new Date();
+    var link=linkFor(pt.id);
+    var subj="[임상시험 "+STUDY.id+"] 오늘의 증상 자가보고를 완료해 주세요";
+    var body="안녕하세요, "+pt.id+"님.\n\n"+STUDY.visit+" 방문의 증상 자가보고(NRS·Likert) 응답을 요청드립니다.\n아래 링크에서 약 1분 내로 완료할 수 있습니다.\n\n"+link+"\n\n감사합니다.\n임상연구팀";
+    var mailto="mailto:"+encodeURIComponent(pt.email)+"?subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);
+    modal(
+      '<div class="modal-head"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><b>알림 이메일 발송</b><button class="x" data-close>&times;</button></div>'+
+      '<div class="modal-body">'+
+        '<div class="mail-row"><span class="lab">받는이</span><span class="val">'+pt.email+'</span></div>'+
+        '<div class="mail-row"><span class="lab">제목</span><span class="val">'+subj+'</span></div>'+
+        '<div class="mail-body">안녕하세요, <b>'+pt.id+'</b>님.<br>'+STUDY.visit+' 방문의 증상 자가보고 응답을 요청드립니다.<br>아래 링크에서 약 1분 내로 완료할 수 있습니다.<br><br><a href="'+link+'">'+link+'</a></div>'+
+        '<div class="modal-acts"><a class="btn" href="'+mailto+'">메일 앱으로 열기</a><button class="btn ghost" id="mCopy">링크 복사</button></div>'+
+      '</div>');
+    document.getElementById("mCopy").onclick=function(){ copy(link); toast("설문 링크 복사됨"); };
+    toast("알림 발송 (시뮬레이션) · "+pt.id);
+    // 콘솔 갱신은 모달 닫을 때
+  }
+
+  function openJson(pt){
+    modal(
+      '<div class="modal-head"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><b>'+pt.id+' · 응답 payload</b><button class="x" data-close>&times;</button></div>'+
+      '<div class="modal-body"><pre>'+hl(JSON.stringify(pt.response,null,2))+'</pre>'+
+      '<div class="modal-acts"><button class="btn ghost" id="jCopy">복사</button></div></div>');
+    document.getElementById("jCopy").onclick=function(){ copy(JSON.stringify(pt.response,null,2)); toast("payload 복사됨"); };
+  }
+
+  /* ============ 환자 입력 화면 ============ */
+  function renderPatient(){
+    root.className="wrap narrow";
+    var pt=findPatient(activeSubject);
+    var sid= pt? pt.id : (activeSubject||"S-000");
+    var st={pain:null,fatigue:null,startedAt:new Date()};
+
+    root.innerHTML =
+      mast('PATIENT VIEW · WEB/MOBILE') +
+      (standalone? '' : '<button class="backlink" id="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>관리자 콘솔로</button>')+
+      '<main class="card" id="form">'+
+        '<div class="card-head"><h1>증상 자가보고</h1>'+
+          '<p>지난 24시간 동안의 상태를 기준으로 응답해 주세요. 모든 문항은 필수입니다.</p>'+
+          '<div class="meta"><span class="chip"><span class="dot live"></span>SUBJECT <b>'+sid+'</b></span>'+
+            '<span class="chip">VISIT <b>'+STUDY.visit+'</b></span>'+
+            '<span class="chip">FORM <b>'+STUDY.formId+'</b></span>'+
+            '<span class="chip">시작 <b>'+fmtT(st.startedAt)+'</b></span></div>'+
+        '</div>'+
+        '<div class="prog"><i id="bar"></i></div>'+
+        '<section class="item" id="item-pain"><div class="q-no">문항 1 · NRS<span class="req">*</span></div>'+
+          '<div class="q-text">현재 통증의 강도는 어느 정도입니까?</div>'+
+          '<p class="q-hint">0(통증 없음)부터 10(상상할 수 있는 최악의 통증) 사이에서 선택하세요.</p>'+
+          '<div class="nrs-anchors"><span>0 · 통증 없음</span><span>최악의 통증 · 10</span></div>'+
+          '<div class="nrs" id="nrs" role="group" aria-label="통증 NRS 0에서 10"></div>'+
+          '<div class="nrs-readout" id="painReadout" aria-live="polite"></div>'+
+          '<div class="err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>통증 점수를 선택해 주세요.</div></section>'+
+        '<section class="item" id="item-fatigue"><div class="q-no">문항 2 · LIKERT<span class="req">*</span></div>'+
+          '<div class="q-text">지난 24시간 동안 피로감은 어느 정도였습니까?</div>'+
+          '<p class="q-hint">가장 가까운 정도를 하나만 선택하세요.</p>'+
+          '<div class="likert" id="likert" role="radiogroup" aria-label="피로도 5단계"></div>'+
+          '<div class="err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>피로도 단계를 선택해 주세요.</div></section>'+
+        '<div class="foot"><button class="submit" id="submit" type="button">제출 · 응답 저장</button>'+
+          '<p class="syznote sysnote" style="margin-top:14px">제출하면 관리자 콘솔의 응답여부가 즉시 갱신됩니다. (메모리 전용)</p></div>'+
+      '</main>';
+
+    if(!standalone) document.getElementById("back").onclick=function(){ view="console"; render(); };
+
+    // NRS
+    var nrs=document.getElementById("nrs");
+    for(var i=0;i<=10;i++){(function(n){
+      var b=document.createElement("button"); b.type="button"; b.textContent=n;
+      b.setAttribute("aria-pressed","false"); b.setAttribute("aria-label","통증 "+n+"점");
+      var hue=150-(n/10)*145;
+      b.style.setProperty("--nrs-bg","hsl("+hue+",46%,96%)");
+      b.style.setProperty("--nrs-accent","hsl("+hue+",62%,42%)");
+      b.onclick=function(){
+        st.pain=n;
+        Array.prototype.forEach.call(nrs.children,function(c){c.setAttribute("aria-pressed","false");});
+        b.setAttribute("aria-pressed","true");
+        var band=PAIN_BANDS.find(function(x){return n<=x.max;});
+        document.getElementById("painReadout").innerHTML="선택: <b>"+n+" / 10</b> · "+band.t;
+        document.getElementById("item-pain").classList.remove("invalid"); prog();
+      };
+      nrs.appendChild(b);
+    })(i);}
+
+    // Likert
+    var lk=document.getElementById("likert");
+    FATIGUE.forEach(function(opt){
+      var lab=document.createElement("label"); lab.className="lk";
+      lab.innerHTML='<span class="radio"><i></i></span><span class="body"><b>'+opt.label+'</b><span>'+opt.desc+'</span></span><span class="grade">'+opt.value+'</span><input type="radio" name="fatigue" value="'+opt.value+'">';
+      lab.querySelector("input").onchange=function(){ st.fatigue=opt; document.getElementById("item-fatigue").classList.remove("invalid"); prog(); };
+      lk.appendChild(lab);
+    });
+
+    function prog(){ var c=(st.pain!==null?1:0)+(st.fatigue!==null?1:0); document.getElementById("bar").style.width=(c/2*100)+"%"; }
+
+    document.getElementById("submit").onclick=function(){
+      var ok=true;
+      if(st.pain===null){document.getElementById("item-pain").classList.add("invalid");ok=false;}
+      if(st.fatigue===null){document.getElementById("item-fatigue").classList.add("invalid");ok=false;}
+      if(!ok){var bad=document.querySelector(".item.invalid"); if(bad) bad.scrollIntoView({behavior:"smooth",block:"center"}); return;}
+      var payload=buildPayload(sid,st);
+      if(pt) pt.response=payload; // 콘솔 테이블 갱신
+      showDone(sid,payload);
+    };
+  }
+
+  function buildPayload(sid,st){
+    var done=new Date(); var band=PAIN_BANDS.find(function(x){return st.pain<=x.max;}); var f=st.fatigue;
+    return {studyId:STUDY.id,subjectId:sid,visit:STUDY.visit,formId:STUDY.formId,formVersion:STUDY.formVersion,locale:"ko-KR",
+      startedAt:st.startedAt.toISOString(),completedAt:done.toISOString(),durationSec:Math.round((done-st.startedAt)/1000),
+      items:[{itemId:"PAIN_NRS",type:"NRS",concept:"통증 강도 (지난 24시간)",scaleMin:0,scaleMax:10,value:st.pain,valueLabel:band.t},
+             {itemId:"FATIGUE_LIKERT",type:"Likert",concept:"피로도 (지난 24시간)",scalePoints:5,value:f.value,valueLabel:f.label}]};
+  }
+
+  function showDone(sid,payload){
+    root.className="wrap narrow";
+    root.innerHTML =
+      mast('PATIENT VIEW · WEB/MOBILE')+
+      '<main class="card"><div class="done-card">'+
+        '<div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>'+
+        '<h2>제출이 완료되었습니다</h2>'+
+        '<p>'+sid+'님의 '+STUDY.visit+' 응답이 기록되었습니다. 참여해 주셔서 감사합니다.</p>'+
+        '<div class="done-sum"><span class="pill">통증 NRS <b>'+payload.items[0].value+'</b>/10</span>'+
+          '<span class="pill">피로도 <b>'+payload.items[1].valueLabel+'</b></span></div>'+
+      '</div>'+
+      (standalone? '' :
+        '<div class="foot"><button class="submit" id="toConsole">관리자 콘솔에서 결과 보기</button></div>')+
+      '</main>'+
+      (standalone? '<p class="syznote sysnote">데모 화면입니다. 실제 운영 시에는 이 payload가 수집 서버로 전송됩니다.</p>':'');
+    if(!standalone) document.getElementById("toConsole").onclick=function(){ view="console"; render(); };
+  }
+
+  /* ============ 공통 유틸 ============ */
+  function findPatient(id){ return DB.patients.filter(function(x){return x.id===id;})[0]||null; }
+  function nextId(){ var n=DB.patients.length+1; return "S-"+String(n).padStart(3,"0"); }
+  function linkFor(id){ return location.origin+location.pathname+"?subject="+id; }
+  function fmt(d){ return d.toLocaleDateString("ko-KR",{month:"2-digit",day:"2-digit"})+" "+d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}); }
+  function fmtT(d){ return d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}); }
+  function copy(t){
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).catch(function(){legacy(t);}); }
+    else legacy(t);
+  }
+  function legacy(t){ var ta=document.createElement("textarea"); ta.value=t; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} ta.remove(); }
+  function toast(msg){
+    var box=document.getElementById("toasts");
+    var el=document.createElement("div"); el.className="toast";
+    el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'+msg;
+    box.appendChild(el);
+    setTimeout(function(){ el.style.opacity="0"; el.style.transform="translateY(8px)"; el.style.transition="all .3s"; setTimeout(function(){el.remove();},320); },2200);
+  }
+  function hl(json){
+    return json.replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/"([^"]+)":/g,'<span class="key">"$1"</span>:')
+      .replace(/: "([^"]*)"/g,': <span class="str">"$1"</span>')
+      .replace(/: (-?\d+(?:\.\d+)?)/g,': <span class="num">$1</span>');
+  }
+  /* modal */
+  var scrim=document.getElementById("scrim"), modalEl=document.getElementById("modal");
+  function modal(html){ modalEl.innerHTML=html; scrim.classList.add("show"); modalEl.querySelectorAll("[data-close]").forEach(function(b){b.onclick=closeModal;}); }
+  function closeModal(){ scrim.classList.remove("show"); if(view==="console") renderConsole(); }
+  scrim.addEventListener("click",function(e){ if(e.target===scrim) closeModal(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&scrim.classList.contains("show")) closeModal(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
